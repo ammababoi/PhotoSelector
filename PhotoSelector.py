@@ -2,27 +2,21 @@ import os
 import shutil
 from tkinter import *
 from tkinter import filedialog, messagebox
-from PIL import Image, ImageTk
-
+from PIL import Image, ImageTk, ImageDraw
 
 class PhotoSelector:
     def __init__(self, root):
         self.root = root
         self.root.title("Photo Selector")
 
-        # Centering the window on startup
-        window_width = 800
-        window_height = 600
-        screen_width = root.winfo_screenwidth()
-        screen_height = root.winfo_screenheight()
-        x = int((screen_width / 2) - (window_width / 2))
-        y = int((screen_height / 2) - (window_height / 2))
-        self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        self.window_width = root.winfo_screenwidth()
+        self.window_height = root.winfo_screenheight()
+        self.root.geometry(f"{self.window_width}x{self.window_height}")
 
-        self.frame = Frame(root)
+        self.frame = Frame(root, bg='black')
         self.frame.pack(fill=BOTH, expand=True)
 
-        self.canvas = Canvas(self.frame, bg='black')
+        self.canvas = Canvas(self.frame, bg='black', highlightthickness=0)
         self.canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
         self.scrollbar = Scrollbar(self.frame, orient=VERTICAL, command=self.canvas.yview)
@@ -31,33 +25,36 @@ class PhotoSelector:
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
-        self.second_frame = Frame(self.canvas)
-        self.canvas.create_window((0, 0), window=self.second_frame, anchor="nw")
+        self.second_frame = Frame(self.canvas, bg='white')
+        self.canvas.create_window((self.window_width // 2, 0), window=self.second_frame, anchor="n")
 
-        self.image_label = Label(self.second_frame)
+        self.image_label = Label(self.second_frame, bg='white')
         self.image_label.pack()
 
-        self.overlay_label = Label(self.second_frame, text="", bg="grey", fg="white", font=("Helvetica", 20))
+        self.overlay_label = Label(self.second_frame, text="", bg="white", fg="black", font=("Helvetica", 16))
         self.overlay_label.pack()
 
-        self.button_frame = Frame(self.second_frame)
+        self.button_frame = Frame(self.second_frame, bg='white')
         self.button_frame.pack(pady=10)
 
-        self.select_button = Button(self.button_frame, text="Select", command=self.toggle_selection, width=10)
+        self.select_button = Button(self.button_frame, text="Select", command=self.toggle_selection, width=10, bg='lightgrey')
         self.select_button.pack(side=LEFT, padx=5)
 
-        self.next_button = Button(self.button_frame, text="Next", command=self.next_image, width=10)
+        self.next_button = Button(self.button_frame, text="Next", command=self.next_image, width=10, bg='lightgrey')
         self.next_button.pack(side=LEFT, padx=5)
 
-        self.prev_button = Button(self.button_frame, text="Previous", command=self.prev_image, width=10)
+        self.prev_button = Button(self.button_frame, text="Previous", command=self.prev_image, width=10, bg='lightgrey')
         self.prev_button.pack(side=LEFT, padx=5)
 
-        self.finish_button = Button(self.button_frame, text="Finish", command=self.finish_selection, width=10)
+        self.finish_button = Button(self.button_frame, text="Finish", command=self.finish_selection, width=10, bg='lightgrey')
         self.finish_button.pack(side=LEFT, padx=5)
 
         self.selected_photos = []
         self.current_image_index = 0
         self.image_files = []
+
+        self.hints_label = Label(self.second_frame, text="Shortcuts: Left Arrow - Previous, Right Arrow - Next, Space - Select, Enter - Finish", bg="white", fg="blue", font=("Helvetica", 18))
+        self.hints_label.pack(pady=10)
 
         self.load_images()
         self.root.bind('<Left>', lambda e: self.prev_image())
@@ -88,10 +85,19 @@ class PhotoSelector:
             try:
                 img = Image.open(img_path)
 
-                img_width = self.canvas.winfo_width()
-                img_height = self.canvas.winfo_height() - 100  # Adjusting height to leave space for buttons
+                img_width = self.window_width - 100
+                img_height = self.window_height - 200
                 img.thumbnail((img_width, img_height), Image.LANCZOS)
                 img = img.convert('RGB')
+                radium_green = "#32CD32"
+                if img_path in self.selected_photos:
+                    draw = ImageDraw.Draw(img)
+                    border_thickness = 10
+                    for i in range(border_thickness):
+                        draw.rectangle(
+                            [(i, i), (img.size[0] - i - 1, img.size[1] - i - 1)],
+                            outline=radium_green
+                        )
 
                 img_tk = ImageTk.PhotoImage(img)
                 self.image_label.configure(image=img_tk)
@@ -107,7 +113,7 @@ class PhotoSelector:
         if img_path in self.selected_photos:
             self.select_button.configure(text="Selected", bg='green', fg='green')
         else:
-            self.select_button.configure(text="Select", bg='red', fg='red')
+            self.select_button.configure(text="Select", bg='lightgrey', fg='red')
 
     def toggle_selection(self, event=None):
         img_path = self.image_files[self.current_image_index]
@@ -115,7 +121,7 @@ class PhotoSelector:
             self.selected_photos.remove(img_path)
         else:
             self.selected_photos.append(img_path)
-        self.update_buttons()
+        self.show_image()
 
     def next_image(self, event=None):
         if self.current_image_index < len(self.image_files) - 1:
@@ -140,20 +146,25 @@ class PhotoSelector:
                 self.selected_options.remove(value)
 
         def apply_actions():
-            if 'print' in self.selected_options:
-                for photo in self.selected_photos:
-                    print(os.path.basename(photo))
-            if 'copy' in self.selected_options:
-                dest_folder = filedialog.askdirectory()
-                if dest_folder:
+            try:
+                if 'print' in self.selected_options:
                     for photo in self.selected_photos:
-                        shutil.copy(photo, dest_folder)
-            if 'move' in self.selected_options:
-                dest_folder = filedialog.askdirectory()
-                if dest_folder:
-                    for photo in self.selected_photos:
-                        shutil.move(photo, dest_folder)
-            self.root.quit()
+                        print(os.path.basename(photo))
+                if 'copy' in self.selected_options:
+                    dest_folder = filedialog.askdirectory()
+                    if dest_folder:
+                        for photo in self.selected_photos:
+                            shutil.copy(photo, dest_folder)
+                if 'move' in self.selected_options:
+                    dest_folder = filedialog.askdirectory()
+                    if dest_folder:
+                        for photo in self.selected_photos:
+                            shutil.move(photo, dest_folder)
+                messagebox.showinfo("Success", "Actions applied successfully.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to apply actions.\nError: {e}")
+            finally:
+                self.root.quit()
 
         print_var = IntVar()
         copy_var = IntVar()
@@ -169,9 +180,8 @@ class PhotoSelector:
         Button(options, text="Apply", command=apply_actions).pack(fill=X)
 
     def on_canvas_configure(self, event):
-        # When canvas is resized, resize and display the image
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         self.show_image()
-
 
 if __name__ == "__main__":
     root = Tk()
