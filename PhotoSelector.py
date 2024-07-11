@@ -105,9 +105,9 @@ class PhotoSelector:
     def update_buttons(self):
         img_path = self.image_files[self.current_image_index]
         if img_path in self.selected_photos:
-            self.select_button.configure(text="Selected", bg='green', fg='white')
+            self.select_button.configure(text="Selected", bg='green', fg='green')
         else:
-            self.select_button.configure(text="Select", bg='red', fg='white')
+            self.select_button.configure(text="Select", bg='red', fg='red')
 
     def toggle_selection(self, event=None):
         img_path = self.image_files[self.current_image_index]
