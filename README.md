@@ -2,6 +2,9 @@
 
 Photo Selector is a Python-based graphical user interface (GUI) application that allows users to browse, select, and perform actions on images from a chosen directory. This application is built using Tkinter and PIL (Pillow) libraries.
 
+![photoselector](https://github.com/ammababoi/PhotoSelector/assets/81505149/54609c3c-1755-4c22-a152-d3a09de22e7c)
+
+
 ## Features
 
 - Browse through images in a selected directory.
